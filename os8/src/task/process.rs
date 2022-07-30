@@ -30,6 +30,9 @@ pub struct ProcessControlBlockInner {
     pub mutex_list: Vec<Option<Arc<dyn Mutex>>>,
     pub semaphore_list: Vec<Option<Arc<Semaphore>>>,
     pub condvar_list: Vec<Option<Arc<Condvar>>>,
+    pub enable_lock_detect: bool, //是否开启死锁检测
+    pub available_mutex: Vec<usize>,
+    pub available_semaphore: Vec<usize>,
 }
 
 impl ProcessControlBlockInner {
@@ -62,6 +65,20 @@ impl ProcessControlBlockInner {
     pub fn get_task(&self, tid: usize) -> Arc<TaskControlBlock> {
         self.tasks[tid].as_ref().unwrap().clone()
     }
+
+    pub fn check_deadlock(&self,lock_type:u8,id:usize)->bool{
+        match lock_type {
+            0 => {
+                self.available_mutex[id]==0
+            }
+            1 => {
+                let sem = self.semaphore_list[id].as_ref().unwrap();
+                self.available_semaphore[id]-1 <= sem.inner.exclusive_access().wait_queue.len()
+            }
+            _ => false,
+        }
+    }
+
 }
 
 impl ProcessControlBlock {
@@ -97,6 +114,9 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    enable_lock_detect: false,
+                    available_mutex: Vec::new(),
+                    available_semaphore: Vec::new(),
                 })
             },
         });
@@ -218,6 +238,9 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    enable_lock_detect: false,
+                    available_mutex: Vec::new(),
+                    available_semaphore: Vec::new(),
                 })
             },
         });
@@ -272,6 +295,9 @@ impl ProcessControlBlock {
                     mutex_list: Vec::new(),
                     semaphore_list: Vec::new(),
                     condvar_list: Vec::new(),
+                    enable_lock_detect: false,
+                    available_mutex: Vec::new(),
+                    available_semaphore: Vec::new(),
                 })
             },
         });

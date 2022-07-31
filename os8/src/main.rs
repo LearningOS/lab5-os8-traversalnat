@@ -30,8 +30,6 @@ extern crate alloc;
 #[macro_use]
 mod console;
 mod config;
-mod drivers;
-mod fs;
 mod lang_items;
 mod logging;
 mod mm;
@@ -41,6 +39,8 @@ mod syscall;
 mod task;
 mod timer;
 mod trap;
+mod drivers;
+mod fs;
 
 core::arch::global_asm!(include_str!("entry.asm"));
 
@@ -67,9 +67,6 @@ pub fn rust_main() -> ! {
     trap::init();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
-    // Uncomment following lines and see what happens!
-    // task::kernel_stackless_coroutine_test();
-    // task::kernel_stackful_coroutine_test();
     fs::list_apps();
     task::add_initproc();
     task::run_tasks();

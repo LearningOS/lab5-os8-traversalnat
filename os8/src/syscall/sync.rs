@@ -128,6 +128,7 @@ pub fn sys_semaphore_down(sem_id: usize) -> isize {
     process_inner.sem_request[sem_id] = Some(tid);
 
     if process_inner.enable_lock_detect && process_inner.check_dead_lock(LockType::Semaphore, sem_id) {
+        println!("=====> semaphore detected sem {} tid {}", sem_id, tid);
         return -0xDEAD;
     }
 

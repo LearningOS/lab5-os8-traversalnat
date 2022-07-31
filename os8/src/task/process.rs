@@ -101,23 +101,31 @@ impl ProcessControlBlockInner {
                 drop(semaphore_inner);
 
                 let sem_num: usize = self.semaphore_list.len();
-                let max_tid: usize = *self.sem_alloc.iter().map(|sem_vec| {
-                    sem_vec.iter().max().unwrap_or(&0)
-                }).max().unwrap_or(&0);
+                let max_tid = *self
+                    .sem_alloc
+                    .iter()
+                    .map(|sem_vec| sem_vec.iter().max().unwrap_or(&0))
+                    .max()
+                    .unwrap_or(&0);
+
+                let max_tid = max(
+                    max_tid,
+                    self.sem_request
+                        .iter()
+                        .map(|&item| item.unwrap_or(0))
+                        .max()
+                        .unwrap_or(0),
+                );
 
                 println!("======> max_tid {}", max_tid);
-                if max_tid == 0 {
-                    return false;
-                }
 
                 let mut Allocation = vec![vec![0 as usize; sem_num]; max_tid + 1];
                 let mut Request = vec![vec![0 as usize; sem_num]; max_tid + 1];
-                let mut Finish: Vec<bool> = vec![true; max_tid + 1];
+                let mut Finish: Vec<bool> = vec![false; max_tid + 1];
 
                 for i in 0..sem_num {
                     for &tid in &self.sem_alloc[i] {
                         Allocation[tid][i] = 1;
-                        Finish[tid] = false;
                     }
                 }
 
@@ -133,19 +141,27 @@ impl ProcessControlBlockInner {
                     .iter()
                     .map(|opt| {
                         if let Some(sem) = opt {
-                            sem.inner.exclusive_access().count as usize
+                            let count = sem.inner.exclusive_access().count;
+                            max(count, 0) as usize
                         } else {
                             0 as usize
                         }
                     })
                     .collect();
 
+                // println!("Allocation \n{:#?}", Allocation);
+                // println!("Request\n{:#?}", Request);
+                // println!("Work\n{:#?}", Work);
+
                 'outer: loop {
                     let mut index = usize::MAX;
                     'inner: for i in 0..=max_tid {
-                        if !Finish[i] && Work.iter().enumerate().all(|(pos, &num)| {
-                            num >= Request[i][pos]
-                        }) {
+                        if !Finish[i]
+                            && Work
+                                .iter()
+                                .enumerate()
+                                .all(|(pos, &num)| num >= Request[i][pos])
+                        {
                             index = i;
                             break 'inner;
                         }
@@ -161,9 +177,11 @@ impl ProcessControlBlockInner {
                     }
                 }
 
-                println!("=======> {}", Finish.iter().filter(|&&item| { item == false }).count());
-                // return Finish.iter().filter(|&&item| { item == false }).count() > 0;
-                return Finish.iter().all(|&item| { item == true });
+                println!(
+                    "=======> {}",
+                    Finish.iter().filter(|&&item| { item == false }).count()
+                );
+                return Finish.iter().any(|&item| item == false);
             }
             _ => {
                 return false;
